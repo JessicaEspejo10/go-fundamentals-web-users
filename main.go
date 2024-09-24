@@ -17,7 +17,7 @@ func init() {
 		}, {
 			ID:        2,
 			FirstName: "Andres",
-			LastName:  "Romàn",
+			LastName:  "Roman",
 			Email:     "aroman@gmail.com",
 		}, {
 			ID:        3,
