@@ -26,6 +26,7 @@ func init() {
 			Email:     "jlopez@gmail.com",
 		},
 	}
+	maxID = 3
 }
 
 func main() {
@@ -44,15 +45,22 @@ type User struct {
 
 var users []User
 
+var maxID uint64
+
 func UserServer(w http.ResponseWriter, r *http.Request) {
 	var status int
 	switch r.Method {
 	case http.MethodGet:
 		GetAllUsers(w)
 	case http.MethodPost:
-		status = 200
-		w.WriteHeader(status)
-		fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, "success in post")
+		decode := json.NewDecoder(r.Body)
+		var u User
+		if err := decode.Decode(&u); err != nil {
+			MsgResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		PostUser(w, u)
+
 	default:
 		status = 404
 		w.WriteHeader(status)
@@ -64,8 +72,26 @@ func GetAllUsers(w http.ResponseWriter) {
 	DataResponse(w, http.StatusOK, users)
 }
 
+func PostUser(w http.ResponseWriter, data interface{}) {
+	user := data.(User)
+	maxID++
+	user.ID = maxID
+	users = append(users, user)
+	DataResponse(w, http.StatusCreated, user)
+
+}
+
+func MsgResponse(w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, message)
+}
+
 func DataResponse(w http.ResponseWriter, status int, users interface{}) {
-	value, _ := json.Marshal(users)
+	value, err := json.Marshal(users)
+	if err != nil {
+		MsgResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	w.WriteHeader(status)
 	fmt.Fprintf(w, `{"status": %d, "data": %s}`, status, value)
 }
