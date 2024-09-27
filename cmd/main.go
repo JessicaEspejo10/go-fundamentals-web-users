@@ -1,114 +1,51 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/JessicaEspejo10/go-fundamentals-web-users/internal/domain"
+	"github.com/JessicaEspejo10/go-fundamentals-web-users/internal/user"
 )
 
-func init() {
-	users = []User{
-		{
+func main() {
+	server := http.NewServeMux()
+
+	db := user.DB{
+		Users: []domain.User{{
 			ID:        1,
-			FirstName: "Paquita",
-			LastName:  "Perez",
-			Email:     "pperez@gmail.com",
+			FirstName: "Ana",
+			LastName:  "Montes",
+			Email:     "amontes@gmail.com",
 		}, {
 			ID:        2,
-			FirstName: "Andres",
-			LastName:  "Roman",
-			Email:     "aroman@gmail.com",
+			FirstName: "Juan",
+			LastName:  "Suarez",
+			Email:     "jsuarez@gmail.com",
 		}, {
 			ID:        3,
-			FirstName: "Juana",
-			LastName:  "Lopez",
-			Email:     "jlopez@gmail.com",
-		},
+			FirstName: "Luis",
+			LastName:  "Naranjos",
+			Email:     "lnaranjo@gmail.com",
+		}, {
+			ID:        4,
+			FirstName: "Ruth",
+			LastName:  "Castro",
+			Email:     "rcastro@gmail.com",
+		}}, MaxUserID: 4,
 	}
-	maxID = 3
-}
 
-func main() {
+	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+	repo := user.NewRepo(db, logger)
+	service := user.NewService(logger, repo)
 
-	http.HandleFunc("/users", UserServer)
-	fmt.Println("server started at port 8080s")
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
+	ctx := context.Background()
 
-type User struct {
-	ID        uint64 `json: "id"`
-	FirstName string `json: "first_name"`
-	LastName  string `json: "last_name"`
-	Email     string `json: "email"`
-}
+	server.HandleFunc("/users", user.MakeEndpoints(ctx, service))
 
-var users []User
-
-var maxID uint64
-
-func UserServer(w http.ResponseWriter, r *http.Request) {
-
-	switch r.Method {
-	case http.MethodGet:
-		GetAllUsers(w)
-	case http.MethodPost:
-		decode := json.NewDecoder(r.Body)
-		var u User
-		if err := decode.Decode(&u); err != nil {
-			MsgResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		PostUser(w, u)
-
-	default:
-		InvalidMethod(w)
-	}
-}
-
-func GetAllUsers(w http.ResponseWriter) {
-	DataResponse(w, http.StatusOK, users)
-}
-
-func PostUser(w http.ResponseWriter, data User) {
-	user := data
-	if user.FirstName == "" {
-		MsgResponse(w, http.StatusBadRequest, "First name is required")
-		return
-	}
-	if user.LastName == "" {
-		MsgResponse(w, http.StatusBadRequest, "Last name is required")
-		return
-	}
-	if user.Email == "" {
-		MsgResponse(w, http.StatusBadRequest, "Email is required")
-		return
-	}
-	maxID++
-	user.ID = maxID
-	users = append(users, user)
-	DataResponse(w, http.StatusCreated, user)
-
-}
-
-func InvalidMethod(w http.ResponseWriter) {
-	status := http.StatusNotFound
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, "not found")
-
-}
-
-func MsgResponse(w http.ResponseWriter, status int, message string) {
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, message)
-}
-
-func DataResponse(w http.ResponseWriter, status int, users interface{}) {
-	value, err := json.Marshal(users)
-	if err != nil {
-		MsgResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"status": %d, "data": %s}`, status, value)
+	fmt.Println("server started at port 8080")
+	log.Fatal(http.ListenAndServe(":8080", server))
 }
