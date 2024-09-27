@@ -32,7 +32,7 @@ func init() {
 func main() {
 
 	http.HandleFunc("/users", UserServer)
-
+	fmt.Println("server started at port 8080s")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -48,7 +48,7 @@ var users []User
 var maxID uint64
 
 func UserServer(w http.ResponseWriter, r *http.Request) {
-	var status int
+
 	switch r.Method {
 	case http.MethodGet:
 		GetAllUsers(w)
@@ -62,9 +62,7 @@ func UserServer(w http.ResponseWriter, r *http.Request) {
 		PostUser(w, u)
 
 	default:
-		status = 404
-		w.WriteHeader(status)
-		fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, "not found")
+		InvalidMethod(w)
 	}
 }
 
@@ -72,12 +70,31 @@ func GetAllUsers(w http.ResponseWriter) {
 	DataResponse(w, http.StatusOK, users)
 }
 
-func PostUser(w http.ResponseWriter, data interface{}) {
-	user := data.(User)
+func PostUser(w http.ResponseWriter, data User) {
+	user := data
+	if user.FirstName == "" {
+		MsgResponse(w, http.StatusBadRequest, "First name is required")
+		return
+	}
+	if user.LastName == "" {
+		MsgResponse(w, http.StatusBadRequest, "Last name is required")
+		return
+	}
+	if user.Email == "" {
+		MsgResponse(w, http.StatusBadRequest, "Email is required")
+		return
+	}
 	maxID++
 	user.ID = maxID
 	users = append(users, user)
 	DataResponse(w, http.StatusCreated, user)
+
+}
+
+func InvalidMethod(w http.ResponseWriter) {
+	status := http.StatusNotFound
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, "not found")
 
 }
 
