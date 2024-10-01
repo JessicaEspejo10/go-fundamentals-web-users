@@ -2,7 +2,9 @@ package user
 
 import (
 	"context"
+	"errors"
 	"log"
+	"slices"
 
 	"github.com/JessicaEspejo10/go-fundamentals-web-users/internal/domain"
 )
@@ -22,8 +24,8 @@ type (
 		//el contexto se usa para controlar el tiempo de vida de una operaciòn
 		//el puntero al objeto user permite modificar el objeto original que se pasa a la funciòn
 		Create(ctx context.Context, user *domain.User) error
-
 		GetAll(ctx context.Context) ([]domain.User, error)
+		Get(ctx context.Context, id uint64) (*domain.User, error)
 	}
 
 	/*estructura de llamada repo que se utiliza para implementar la interfz Repository,
@@ -62,4 +64,15 @@ func (r *repo) GetAll(ctx context.Context) ([]domain.User, error) {
 	r.log.Println("repository get all")
 	//devuelve el slice de los usuarios de la base de datos del repositorio y el error
 	return r.db.Users, nil
+}
+
+func (r *repo) Get(ctx context.Context, id uint64) (*domain.User, error) {
+	index := slices.IndexFunc(r.db.Users, func(v domain.User) bool {
+		return v.ID == id
+	})
+
+	if index < 0 {
+		return nil, errors.New("User not found, doesn't exist")
+	}
+	return &r.db.Users[index], nil
 }

@@ -14,6 +14,7 @@ type (
 		//su responsabilidad es enviar el usuario al repositorio
 		Create(ctx context.Context, firstName, lastName, email string) (*domain.User, error)
 		GetAll(ctx context.Context) ([]domain.User, error)
+		Get(ctx context.Context, id uint64) (*domain.User, error)
 	}
 	//genera estructura con logger y la interfaz de la capa repositorio
 	service struct {
@@ -41,7 +42,6 @@ func (s service) Create(ctx context.Context, firstName, lastName, email string) 
 	if err := s.repo.Create(ctx, user); err != nil {
 		return nil, err
 	}
-	s.log.Println("service create")
 	return user, nil
 }
 
@@ -51,6 +51,14 @@ func (s service) GetAll(ctx context.Context) ([]domain.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.log.Println("service get all")
 	return users, err
+}
+
+func (s service) Get(ctx context.Context, id uint64) (*domain.User, error) {
+	user, err := s.repo.Get(ctx, id)
+
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
