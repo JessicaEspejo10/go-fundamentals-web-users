@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"errors"
 	"log"
 	"slices"
 
@@ -26,7 +25,7 @@ type (
 		Create(ctx context.Context, user *domain.User) error
 		GetAll(ctx context.Context) ([]domain.User, error)
 		Get(ctx context.Context, id uint64) (*domain.User, error)
-		Update(ctx context.Context, id uint64, firstName *string, lastName *string, email *string) error
+		Update(ctx context.Context, id uint64, firstName, lastName, email *string) error
 	}
 
 	/*estructura de llamada repo que se utiliza para implementar la interfz Repository,
@@ -71,7 +70,7 @@ func (r *repo) Get(ctx context.Context, id uint64) (*domain.User, error) {
 	})
 
 	if index < 0 {
-		return nil, errors.New("User doesn't exist")
+		return nil, ErrorNotFound{id}
 	}
 	return &r.db.Users[index], nil
 }
