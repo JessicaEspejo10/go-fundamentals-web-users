@@ -26,6 +26,7 @@ type (
 		Create(ctx context.Context, user *domain.User) error
 		GetAll(ctx context.Context) ([]domain.User, error)
 		Get(ctx context.Context, id uint64) (*domain.User, error)
+		Update(ctx context.Context, id uint64, firstName *string, lastName *string, email *string) error
 	}
 
 	/*estructura de llamada repo que se utiliza para implementar la interfz Repository,
@@ -60,8 +61,6 @@ func (r *repo) Create(ctx context.Context, user *domain.User) error {
 
 // la funcion opera sobre una instancia de repo por lo cual modifica sus datos
 func (r *repo) GetAll(ctx context.Context) ([]domain.User, error) {
-	//el logger imprime la fecha y hora de el mensaje junto con el texto del mensaje
-	r.log.Println("repository get all")
 	//devuelve el slice de los usuarios de la base de datos del repositorio y el error
 	return r.db.Users, nil
 }
@@ -72,7 +71,27 @@ func (r *repo) Get(ctx context.Context, id uint64) (*domain.User, error) {
 	})
 
 	if index < 0 {
-		return nil, errors.New("User not found, doesn't exist")
+		return nil, errors.New("User doesn't exist")
 	}
 	return &r.db.Users[index], nil
+}
+
+func (r *repo) Update(ctx context.Context, id uint64, firstName, lastName, email *string) error {
+	user, err := r.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if firstName != nil {
+		user.FirstName = *firstName
+	}
+
+	if lastName != nil {
+		user.LastName = *lastName
+	}
+	if email != nil {
+		user.Email = *email
+	}
+	return nil
+
 }
