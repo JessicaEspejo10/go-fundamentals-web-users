@@ -1,0 +1,6 @@
+filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
+filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+github.com/JessicaEspejo10/go-fundamentals-response v0.0.2 h1:CFW+LMEq7mJsSNxRHyCU66X57bQ10mYZ3OcoUSJXS+g=
+github.com/JessicaEspejo10/go-fundamentals-response v0.0.2/go.mod h1:SCFzKIF4466/hP4Gea03XSjAQdoTsWQl1FStQZEX5ug=
+github.com/go-sql-driver/mysql v1.8.1 h1:LedoTUt/eveggdHS9qUFC1EFSa8bU2+1pZjSRpvNJ1Y=
+github.com/go-sql-driver/mysql v1.8.1/go.mod h1:wEBSXgmK//2ZFJyE+qWnIsVGmvmEKlqwuVSjsCm7DZg=

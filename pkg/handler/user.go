@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/JessicaEspejo10/go-fundamentals-response/response"
 	"github.com/JessicaEspejo10/go-fundamentals-web-users/internal/user"
 	"github.com/JessicaEspejo10/go-fundamentals-web-users/pkg/transport"
 )
@@ -117,23 +118,18 @@ func decodeCreateUser(ctx context.Context, r *http.Request) (interface{}, error)
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, resp interface{}) error {
-	data, err := json.Marshal(resp)
-	fmt.Println(resp)
-	if err != nil {
-		return err
-	}
-	status := http.StatusOK
-	w.WriteHeader(status)
+	r := resp.(response.Response)
 	w.Header().Set("Content-type", "application/json;charset=utf-8")
-	fmt.Fprintf(w, `{"status": %d, "data": %s}`, status, data)
-	return nil
+	w.WriteHeader(r.StatusCode())
+	return json.NewEncoder(w).Encode(resp)
 }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
-	status := http.StatusInternalServerError
-	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
-	fmt.Fprintf(w, `{"status":%d," message":%s}`, status, err.Error())
+	resp := err.(response.Response)
+
+	w.WriteHeader(resp.StatusCode())
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func InvalidMethod(w http.ResponseWriter) {
