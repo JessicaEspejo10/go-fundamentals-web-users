@@ -3,7 +3,9 @@ package user
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/JessicaEspejo10/go-fundamentals-web-users/internal/domain"
 )
@@ -86,36 +88,66 @@ func (r *repo) GetAll(ctx context.Context) ([]domain.User, error) {
 }
 
 func (r *repo) Get(ctx context.Context, id uint64) (*domain.User, error) {
-	/*index := slices.IndexFunc(r.db.Users, func(v domain.User) bool {
-		return v.ID == id
-	})
 
-	if index < 0 {
-		return nil, ErrorNotFound{id}
+	sqlQuery := "SELECT id, first_name, last_name, email FROM users WHERE id = ?"
+	var u domain.User
+	if err := r.db.QueryRow(sqlQuery, id).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email); err != nil {
+		r.log.Println(err.Error())
+		if err == sql.ErrNoRows {
+			return nil, ErrorNotFound{id}
+		}
+		return nil, err
 	}
-	return &r.db.Users[index], nil
-	*/
-	return nil, nil
+	r.log.Println("get user with id: ", id)
+
+	return &u, nil
 }
 
 func (r *repo) Update(ctx context.Context, id uint64, firstName, lastName, email *string) error {
-	/*
-		user, err := r.Get(ctx, id)
-		if err != nil {
-			return err
-		}
+	var fields []string
+	var values []interface{}
 
-		if firstName != nil {
-			user.FirstName = *firstName
-		}
+	if firstName != nil {
+		fields = append(fields, "first_name = ?")
+		values = append(values, *firstName)
+	}
 
-		if lastName != nil {
-			user.LastName = *lastName
-		}
-		if email != nil {
-			user.Email = *email
-		}
-	*/
+	if lastName != nil {
+		fields = append(fields, "last_name = ?")
+		values = append(values, *lastName)
+
+	}
+	if email != nil {
+		fields = append(fields, "email = ?")
+		values = append(values, *email)
+	}
+
+	if len(fields) == 0 {
+		r.log.Println(ErrNotFields.Error())
+		return ErrNotFields
+	}
+	values = append(values, id)
+
+	sqlQuery := fmt.Sprintf("UPDATE users SET %s WHERE id = ?", strings.Join(fields, ","))
+	res, err := r.db.Exec(sqlQuery, values...)
+	if err != nil {
+		r.log.Println(err.Error)
+		return err
+	}
+
+	row, err := res.RowsAffected()
+
+	if err != nil {
+		r.log.Println(err.Error)
+		return err
+	}
+
+	if row == 0 {
+		err := ErrorNotFound{id}
+		r.log.Println(err.Error())
+		return err
+	}
+	r.log.Println("user updated with id ", id)
+
 	return nil
-
 }
