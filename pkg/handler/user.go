@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,69 +11,38 @@ import (
 	"github.com/JessicaEspejo10/go-fundamentals-response/response"
 	"github.com/JessicaEspejo10/go-fundamentals-web-users/internal/user"
 	"github.com/JessicaEspejo10/go-fundamentals-web-users/pkg/transport"
+	"github.com/gin-gonic/gin"
 )
 
-func NewUserHTTPServer(ctx context.Context, router *http.ServeMux, endpoints user.Endpoints) {
-	router.HandleFunc("/users/", UserServer(ctx, endpoints))
+func NewUserHTTPServer(endpoints user.Endpoints) http.Handler {
 
-}
+	r := gin.Default()
 
-func UserServer(ctx context.Context, endpoints user.Endpoints) func(w http.ResponseWriter, e *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+	r.POST("/users", transport.GinServer(
+		transport.Endpoint(endpoints.Create),
+		decodeCreateUser,
+		encodeResponse,
+		encodeError))
 
-		url := r.URL.Path
-		log.Println(r.Method, ": ", url)
-		path, pathSize := transport.Clean(url)
+	r.GET("/users", transport.GinServer(
+		transport.Endpoint(endpoints.GetAll),
+		decodeGetAllUser,
+		encodeResponse,
+		encodeError))
 
-		params := make(map[string]string)
-		if pathSize == 4 && path[2] != "" {
-			params["userId"] = path[2]
-		}
+	r.GET("/users/:id", transport.GinServer(
+		transport.Endpoint(endpoints.Get),
+		decodeGetUserById,
+		encodeResponse,
+		encodeError))
 
-		params["token"] = r.Header.Get("Authorization")
+	r.PATCH("/users/:id", transport.GinServer(
+		transport.Endpoint(endpoints.Update),
+		decodeUpdateUser,
+		encodeResponse,
+		encodeError))
 
-		trans := transport.New(w, r, context.WithValue(ctx, "params", params))
-		var end user.Controller
-		var deco func(ctx context.Context, r *http.Request) (interface{}, error)
-
-		switch r.Method {
-
-		case http.MethodGet:
-			switch pathSize {
-			case 3:
-				end = endpoints.GetAll
-				deco = decodeGetAllUser
-			case 4:
-				end = endpoints.Get
-				deco = decodeGetUserById
-			}
-		case http.MethodPost:
-			switch pathSize {
-			case 3:
-				end = endpoints.Create
-				deco = decodeCreateUser
-			}
-		case http.MethodPatch:
-			switch pathSize {
-			case 4:
-				end = endpoints.Update
-				deco = decodeUpdateUser
-			}
-		}
-
-		if end != nil && deco != nil {
-			trans.Server(
-				transport.Endpoint(end),
-				deco,
-				encodeResponse,
-				encodeError)
-			return
-		} else {
-			InvalidMethod(w)
-
-		}
-
-	}
+	return r
 }
 
 func tokenVerify(token string) error {
@@ -85,18 +52,17 @@ func tokenVerify(token string) error {
 	return nil
 }
 
-func decodeUpdateUser(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeUpdateUser(c *gin.Context) (interface{}, error) {
 	var req user.UpdateReq
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
 		return nil, response.BadRequest(fmt.Sprintf("invalid request format: '%v'", err.Error()))
 	}
 
-	params := ctx.Value("params").(map[string]string)
-	if err := tokenVerify(params["token"]); err != nil {
+	if err := tokenVerify(c.Request.Header.Get("Authorization")); err != nil {
 		return nil, response.Unauthorized(err.Error())
 	}
-	id, err := strconv.ParseUint(params["userId"], 10, 64)
+	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 64)
 
 	if err != nil {
 		return nil, response.BadRequest(err.Error())
@@ -106,13 +72,13 @@ func decodeUpdateUser(ctx context.Context, r *http.Request) (interface{}, error)
 	return req, nil
 }
 
-func decodeGetUserById(ctx context.Context, r *http.Request) (interface{}, error) {
-	params := ctx.Value("params").(map[string]string)
+func decodeGetUserById(c *gin.Context) (interface{}, error) {
 
-	if err := tokenVerify(params["token"]); err != nil {
+	if err := tokenVerify(c.Request.Header.Get("Authorization")); err != nil {
 		return nil, response.Unauthorized(err.Error())
 	}
-	id, err := strconv.ParseUint(params["userId"], 10, 64)
+
+	id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 64)
 
 	if err != nil {
 		return nil, response.BadRequest(err.Error())
@@ -122,49 +88,37 @@ func decodeGetUserById(ctx context.Context, r *http.Request) (interface{}, error
 	}, nil
 }
 
-func decodeGetAllUser(ctx context.Context, r *http.Request) (interface{}, error) {
-	params := ctx.Value("params").(map[string]string)
+func decodeGetAllUser(c *gin.Context) (interface{}, error) {
 
-	if err := tokenVerify(params["token"]); err != nil {
+	if err := tokenVerify(c.Request.Header.Get("Authorization")); err != nil {
 		return nil, response.Unauthorized(err.Error())
 	}
 	return nil, nil
 }
 
-func decodeCreateUser(ctx context.Context, r *http.Request) (interface{}, error) {
-	params := ctx.Value("params").(map[string]string)
+func decodeCreateUser(c *gin.Context) (interface{}, error) {
 
-	if err := tokenVerify(params["token"]); err != nil {
+	if err := tokenVerify(c.Request.Header.Get("Authorization")); err != nil {
 		return nil, response.Unauthorized(err.Error())
 	}
 
 	var req user.CreateReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
 		return nil, response.BadRequest(fmt.Sprintf("invalid request format: '%v'", err.Error()))
 	}
 	return req, nil
 }
 
-func encodeResponse(ctx context.Context, w http.ResponseWriter, resp interface{}) error {
+func encodeResponse(c *gin.Context, resp interface{}) {
 	r := resp.(response.Response)
-	w.Header().Set("Content-type", "application/json;charset=utf-8")
-	w.WriteHeader(r.StatusCode())
-	return json.NewEncoder(w).Encode(resp)
+	c.Header("Content-type", "application/json;charset=utf-8")
+	c.JSON(r.StatusCode(), resp)
 }
 
-func encodeError(_ context.Context, err error, w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json;charset=utf-8")
+func encodeError(c *gin.Context, err error) {
+	c.Header("Content-type", "application/json;charset=utf-8")
 	resp := err.(response.Response)
-
-	w.WriteHeader(resp.StatusCode())
-	_ = json.NewEncoder(w).Encode(resp)
-}
-
-func InvalidMethod(w http.ResponseWriter) {
-	status := http.StatusNotFound
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"status": %d, "message": "%s"}`, status, "not found")
-
+	c.JSON(resp.StatusCode(), resp)
 }
 
 func MsgResponse(w http.ResponseWriter, status int, message string) {
