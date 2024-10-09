@@ -21,8 +21,8 @@ func NewUserHTTPServer(endpoints user.Endpoints) http.Handler {
 	r.POST("/users", transport.GinServer(
 		transport.Endpoint(endpoints.Create),
 		decodeCreateUser,
-		encodeResponse,
-		encodeError))
+
+		encodeErencodeResponse, ror))
 
 	r.GET("/users", transport.GinServer(
 		transport.Endpoint(endpoints.GetAll),
